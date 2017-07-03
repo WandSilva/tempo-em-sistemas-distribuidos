@@ -16,19 +16,27 @@ public class ControllerView implements Initializable {
     @FXML
     Label lblContador;
 
-    private int contador = 0;
-    private float drifft=0;
+    @FXML
+    Label lblID;
+
+    private int contadorTempo = 0;
+    private int contadorAuxiliar = 0;
+    private float drifft = 0;
 
     private Cliente cliente;
+    private String id;
+
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         this.cliente = new Cliente();
         cliente.iniciarGrupo();
-        String x = JOptionPane.showInputDialog("contador");
+        String x = JOptionPane.showInputDialog("contadorTempo");
         String y = JOptionPane.showInputDialog("drifft");
-        contador = Integer.parseInt(x);
+        this.id = JOptionPane.showInputDialog("informe o ID");
+        contadorTempo = Integer.parseInt(x);
         drifft = Float.parseFloat(y);
+        lblID.setText(id);
         this.contar();
     }
 
@@ -36,26 +44,40 @@ public class ControllerView implements Initializable {
         Task t = new Task() {
             @Override
             protected Object call() throws Exception {
-               while (true){
-                   Platform.runLater(() ->{
-                       contador++;
-                       int seg = contador % 60;
-                       int min = contador / 60;
-                       int hora = min / 60;
-                       if(hora == 24) hora = 0;
-                       System.out.println("loop");
-                       min%=60;
-                       lblContador.setText(String.format("%02d:%02d:%02d",hora,min,seg));
-                       cliente.enviarContadorHorario(contador);
-                      // if(cliente.isControleContador()) {
-                          // cliente.setControleContador(false);
-                           contador = cliente.receberContadorHorario();
-                      // }
-                   });
-                   Thread.sleep((long) (1000*drifft));
-                   System.out.println((long) (1000*drifft));
-               }
+                while (true) {
+                    Platform.runLater(() -> {
+                        contadorTempo++;
+                        contadorAuxiliar++;
+                        int seg = contadorTempo % 60;
+                        int min = contadorTempo / 60;
+                        int hora = min / 60;
+                        if (hora == 24) hora = 0;
+                        min %= 60;
+                        lblContador.setText(String.format("%02d:%02d:%02d", hora, min, seg));
+
+                        if (cliente.getIdCoordenador().equals(id)) {
+                            cliente.enviarContadorHorario(contadorTempo, id);
+                        }
+                        if (contadorAuxiliar > 5 && !cliente.getIdCoordenador().equals(id)) {
+                            int tempoRecebido = cliente.receberContadorHorario();
+
+                            if (tempoRecebido >= contadorTempo) {
+                                contadorTempo = tempoRecebido;
+                                System.out.println("atualizei");
+                            }
+                            else {
+                                cliente.enviarContadorHorario(contadorTempo, id);
+                                System.out.println("enviei meu tempo");
+                            }
+                            contadorAuxiliar = 0;
+                        }
+
+
+                    });
+                    Thread.sleep((long) (1000 * drifft));
+                }
             }
-        };new Thread(t).start();
+        };
+        new Thread(t).start();
     }
 }

@@ -17,8 +17,13 @@ public class Cliente {
     private MulticastSocket conexaoGrupo;
     private final static int PORTA_CLIENTE = 44444;
     private static int CONTADOR_HORARIO;
-    private static boolean CONTROLE_CONTADOR;
+    private static String ID_COORDENADOR;
 
+
+    public Cliente() {
+        ID_COORDENADOR = new String();
+        CONTADOR_HORARIO = 0;
+    }
 
     public void iniciarGrupo() {
         try {
@@ -32,8 +37,8 @@ public class Cliente {
         }
     }
 
-    public synchronized void enviarContadorHorario(int contadorHorario) {
-        byte dados[] = ("1000" + ";" + contadorHorario).getBytes();
+    public synchronized void enviarContadorHorario(int contadorHorario, String id) {
+        byte dados[] = ("1000" + ";" + contadorHorario + ";" +id).getBytes();
         DatagramPacket msgPacket = new DatagramPacket(dados, dados.length, enderecoMulticast, PORTA_CLIENTE);
         try {
             conexaoGrupo.send(msgPacket);
@@ -46,13 +51,8 @@ public class Cliente {
         return this.CONTADOR_HORARIO;
     }
 
-
-    public boolean isControleContador() {
-        return CONTROLE_CONTADOR;
-    }
-
-    public void setControleContador(boolean controleContador) {
-        CONTROLE_CONTADOR = controleContador;
+    public String getIdCoordenador() {
+        return ID_COORDENADOR;
     }
 
     private static class ThreadCliente extends Thread {
@@ -83,9 +83,9 @@ public class Cliente {
                         String[] dadosRecebidos = msg.split(";");
                         int contadorHorario = Integer.parseInt(dadosRecebidos[1].trim());
                         if (contadorHorario > Cliente.CONTADOR_HORARIO) {
-                            System.out.println("Sou o coordenador");
+                            System.out.println("o coordenador é "+dadosRecebidos[2]);
                             Cliente.CONTADOR_HORARIO = contadorHorario;
-                            Cliente.CONTROLE_CONTADOR = true;
+                            Cliente.ID_COORDENADOR = dadosRecebidos[2].trim();
                         }
                         else System.out.println("não sou coordenador");
                     }
