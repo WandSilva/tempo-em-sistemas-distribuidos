@@ -11,8 +11,10 @@ import java.util.Date;
  * Created by wanderson on 27/06/17.
  */
 
-
-public class Cliente {
+/**
+ * classe responsável por fazer a comunicação entre os clientes
+ */
+public class Comunicacao {
 
     private static InetAddress enderecoMulticast;
     private static MulticastSocket conexaoGrupo;
@@ -24,12 +26,15 @@ public class Cliente {
     private static long TEMPO_RESP;
 
 
-    public Cliente(String meuId) {
+    public Comunicacao(String meuId) {
         ID_COORDENADOR = new String();
         CONTADOR_HORARIO = 0;
         MEU_ID = meuId;
     }
 
+    /**
+     * inicia o grupo multicast
+     */
     public void iniciarGrupo() {
         try {
             enderecoMulticast = InetAddress.getByName("235.0.0.1");
@@ -42,6 +47,11 @@ public class Cliente {
         }
     }
 
+    /**
+     * o cliente coordenador envia seu tempo para o grupo
+     * @param contadorHorario
+     * @param id
+     */
     public void enviarContadorHorario(int contadorHorario, String id) {
         byte dados[] = ("1000" + ";" + contadorHorario + ";" + id).getBytes();
         DatagramPacket msgPacket = new DatagramPacket(dados, dados.length, enderecoMulticast, PORTA_CLIENTE);
@@ -52,6 +62,10 @@ public class Cliente {
         }
     }
 
+    /**
+     * o cliente coordenador solicita uma resposta para saber o atraso da rede.
+     * @param id
+     */
     public void solicitarTempoResposta(String id) {
         byte dados[] = ("1001" + ";" + id).getBytes();
         DatagramPacket msgPacket = new DatagramPacket(dados, dados.length, enderecoMulticast, PORTA_CLIENTE);
@@ -86,6 +100,11 @@ public class Cliente {
         TEMPO_RESP = tempoResp;
     }
 
+
+    /**
+     * Classe interna responsável por criar a thread e ficar sempre
+     * esperando as solicitações dos clientes
+     */
     private static class ThreadCliente extends Thread {
 
         private final MulticastSocket socketMulticast;
@@ -102,8 +121,6 @@ public class Cliente {
         @Override
         public void run() {
             try {
-
-
                 while (true) {
                     byte dados[] = new byte[1024];
                     DatagramPacket datagrama = new DatagramPacket(dados, dados.length);
@@ -113,10 +130,10 @@ public class Cliente {
                     if (msg.startsWith("1000")) {
                         String[] dadosRecebidos = msg.split(";");
                         int contadorHorario = Integer.parseInt(dadosRecebidos[1].trim());
-                        if (contadorHorario > Cliente.CONTADOR_HORARIO) {
+                        if (contadorHorario > Comunicacao.CONTADOR_HORARIO) {
                             System.out.println("o coordenador é " + dadosRecebidos[2]);
-                            Cliente.CONTADOR_HORARIO = contadorHorario;
-                            Cliente.ID_COORDENADOR = dadosRecebidos[2].trim();
+                            Comunicacao.CONTADOR_HORARIO = contadorHorario;
+                            Comunicacao.ID_COORDENADOR = dadosRecebidos[2].trim();
                         } else System.out.println("não sou coordenador");
                     }
                     if (msg.startsWith("1001")) {
