@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
+import java.util.Date;
 
 
 /**
@@ -13,16 +14,20 @@ import java.net.MulticastSocket;
 
 public class Cliente {
 
-    private InetAddress enderecoMulticast;
-    private MulticastSocket conexaoGrupo;
+    private static InetAddress enderecoMulticast;
+    private static MulticastSocket conexaoGrupo;
     private final static int PORTA_CLIENTE = 44444;
     private static int CONTADOR_HORARIO;
     private static String ID_COORDENADOR;
+    private static String MEU_ID;
+    private static boolean CONTROLE_SOLICITACAO;
+    private static long TEMPO_RESP;
 
 
-    public Cliente() {
+    public Cliente(String meuId) {
         ID_COORDENADOR = new String();
         CONTADOR_HORARIO = 0;
+        MEU_ID = meuId;
     }
 
     public void iniciarGrupo() {
@@ -37,8 +42,8 @@ public class Cliente {
         }
     }
 
-    public synchronized void enviarContadorHorario(int contadorHorario, String id) {
-        byte dados[] = ("1000" + ";" + contadorHorario + ";" +id).getBytes();
+    public void enviarContadorHorario(int contadorHorario, String id) {
+        byte dados[] = ("1000" + ";" + contadorHorario + ";" + id).getBytes();
         DatagramPacket msgPacket = new DatagramPacket(dados, dados.length, enderecoMulticast, PORTA_CLIENTE);
         try {
             conexaoGrupo.send(msgPacket);
@@ -47,12 +52,38 @@ public class Cliente {
         }
     }
 
-    public synchronized int receberContadorHorario() {
+    public void solicitarTempoResposta(String id) {
+        byte dados[] = ("1001" + ";" + id).getBytes();
+        DatagramPacket msgPacket = new DatagramPacket(dados, dados.length, enderecoMulticast, PORTA_CLIENTE);
+        try {
+            conexaoGrupo.send(msgPacket);
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    public int receberContadorHorario() {
         return this.CONTADOR_HORARIO;
     }
 
     public String getIdCoordenador() {
         return ID_COORDENADOR;
+    }
+
+    public boolean isControleSolicitacao() {
+        return CONTROLE_SOLICITACAO;
+    }
+
+    public void setControleSolicitacao(boolean controleSolicitacao) {
+        CONTROLE_SOLICITACAO = controleSolicitacao;
+    }
+
+    public long getTempoResp() {
+        return TEMPO_RESP;
+    }
+
+    public void setTempoResp(long tempoResp) {
+        TEMPO_RESP = tempoResp;
     }
 
     private static class ThreadCliente extends Thread {
@@ -83,18 +114,35 @@ public class Cliente {
                         String[] dadosRecebidos = msg.split(";");
                         int contadorHorario = Integer.parseInt(dadosRecebidos[1].trim());
                         if (contadorHorario > Cliente.CONTADOR_HORARIO) {
-                            System.out.println("o coordenador é "+dadosRecebidos[2]);
+                            System.out.println("o coordenador é " + dadosRecebidos[2]);
                             Cliente.CONTADOR_HORARIO = contadorHorario;
                             Cliente.ID_COORDENADOR = dadosRecebidos[2].trim();
+                        } else System.out.println("não sou coordenador");
+                    }
+                    if (msg.startsWith("1001")) {
+
+                        String[] dadosRecebidos = msg.split(";");
+                        if (!
+                                MEU_ID.equals(dadosRecebidos[1].trim())) {
+                            byte data[] = ("1002").getBytes();
+                            DatagramPacket msgPacket = new DatagramPacket(data, data.length, enderecoMulticast, PORTA_CLIENTE);
+                            try {
+                                conexaoGrupo.send(msgPacket);
+                            } catch (IOException ex) {
+                                ex.printStackTrace();
+                            }
                         }
-                        else System.out.println("não sou coordenador");
+
+                    }
+                    if (msg.startsWith("1002")) {
+                        TEMPO_RESP = new Date().getTime();
                     }
                 }
 
             } catch (IOException e) {
                 e.printStackTrace();
-
             }
         }
     }
 }
+
